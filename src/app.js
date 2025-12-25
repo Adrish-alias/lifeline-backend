@@ -4,6 +4,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth.routes");
 const referralRoutes = require("./routes/referral.routes");
 const hospitalRoutes = require("./routes/hospital.routes");
+const adminRoutes = require("./routes/admin.routes");
 const app = express();
 
 app.use(cors());
@@ -19,6 +20,8 @@ app.get("/health", (req, res) => {
 });
 //hospital routes
 app.use("/hospitals", hospitalRoutes); // ✅ NEW
+//admin routes
+app.use("/admin",adminRoutes);
 
 
 

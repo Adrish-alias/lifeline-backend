@@ -73,26 +73,35 @@ exports.requestHospital = async (req, res) => {
 
     const referral = await Referral.findOne({
       _id: req.params.id,
-      fromHospital: req.user.hospitalId // 🔥 must belong to same hospital
+      fromHospital: req.user.hospitalId
     });
 
     if (!referral) {
       return res.status(404).json({ message: "Referral not found" });
     }
 
-    if (referral.status !== "PENDING") {
-      return res.status(400).json({ message: "Referral already processed" });
+    if (!["PENDING", "REJECTED"].includes(referral.status)) {
+      return res.status(400).json({ message: "Referral cannot be requested now" });
     }
 
-    const hospital = await Hospital.findById(hospitalId);
-    if (!hospital) {
-      return res.status(404).json({ message: "Hospital not found" });
+    // Prevent retrying same hospital
+    if (
+      referral.requestedHospital?.toString() === hospitalId ||
+      referral.rejectedBy.includes(hospitalId)
+    ) {
+      return res.status(400).json({ message: "Hospital already tried" });
     }
 
-    referral.status = "REQUESTED";
+    // If retrying, store previous rejection
+    if (referral.status === "REJECTED" && referral.requestedHospital) {
+      referral.rejectedBy.push(referral.requestedHospital);
+    }
+
     referral.requestedHospital = hospitalId;
+    referral.status = "REQUESTED";
 
     await referral.save();
+
     res.json(referral);
   } catch (err) {
     console.error(err);
@@ -100,12 +109,12 @@ exports.requestHospital = async (req, res) => {
   }
 };
 
+
 // @desc   Referral staff queue (hospital-scoped)
 // @route  GET /referrals
 exports.getPendingReferrals = async (req, res) => {
   try {
     const referrals = await Referral.find({
-      status: "PENDING",
       fromHospital: req.user.hospitalId // 🔥 THIS IS THE BIG ONE
     })
       .populate("createdBy", "name email")

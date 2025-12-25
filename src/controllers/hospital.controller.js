@@ -11,12 +11,14 @@ exports.searchHospitals = async (req, res) => {
       return res.status(400).json({ message: "Resources are required" });
     }
 
-    // Build dynamic query:
-    // capacities.ICU > 0, capacities.VENTILATOR > 0, etc.
     const capacityQuery = {};
+
     resources.forEach(resource => {
       capacityQuery[`capacities.${resource}`] = { $gt: 0 };
     });
+
+    // Exclude own hospital
+    capacityQuery._id = { $ne: req.user.hospitalId };
 
     const hospitals = await Hospital.find(capacityQuery);
 

@@ -25,6 +25,7 @@ exports.login = async (req, res) => {
       email: user.email,
       role: user.role,
       hospitalId: user.hospitalId?._id || null,
+      hospitalName: user.hospitalId?.name || null
     }
   });
 };
